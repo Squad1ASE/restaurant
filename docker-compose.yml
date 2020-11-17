@@ -1,0 +1,43 @@
+version: "3"
+services:
+  nginx-restaurant:
+    container_name: nginx-restaurant
+    build: nginx
+    ports:
+      - 8000:8000
+    depends_on:
+      - restaurant
+    networks:
+      - default
+      - restaurant-network
+
+  restaurant:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    environment: 
+    - DATABASE_URI=postgresql://postgres:postgres@postgres-restaurant:5432/postgres
+    ports:
+      - "5060-5070:5060"
+    links:
+      - postgres-restaurant
+    networks:
+      - restaurant-network
+    command: python restaurant/app.py
+    depends_on:
+      - postgres-restaurant
+
+  postgres-restaurant:
+    container_name: postgres-restaurant
+    hostname: postgres-restaurant
+    restart: always
+    image: postgres:latest
+    environment: 
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    expose:
+      - "5432"
+    networks:
+      - restaurant-network
+
+networks:
+  restaurant-network:
