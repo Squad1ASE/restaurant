@@ -52,11 +52,103 @@ components:
   schemas:
     Restaurant:
       required:
+      - owner_id
       - name
-      - likes
       - lat
       - lon
       - phone
+      - prec_measures
+      - cuisine_type
+      - avg_time_of_stay
+      - tables
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier
+          readOnly: true
+          example: 123
+        owner_id:
+          type: integer
+          description: Unique identifier of restaurant owner
+          readOnly: true
+          example: 123
+        name:
+          maxLength: 128
+          minLength: 1
+          type: string
+          description: Restaurant's name
+          example: "My Pizza Restaurant"
+        
+        lat:
+          type: number
+          description: Restaurant latitude
+          example: 42.42
+        lon:
+          type: number
+          description: Restaurant longitude
+          example: 42.42
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Restaurant phone number
+          example: "050123456"
+        
+        capacity:
+          type: integer
+          description: Restaurant capacity
+          readOnly: true
+          example: 35
+        prec_measures:
+          maxLength: 128
+          minLength: 1
+          type: string
+          description: Precautionary measures taken by the restaurant
+          example: "Adopted the measures envisaged by the DPCM 'X'"
+
+        cuisine_type:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+            description: Cuisine type
+            example: "italian"
+          description: List of restaurant cuisine types
+          example: ["italian", "traditional"]
+
+        avg_time_of_stay:
+          minimum: 15
+          type: integer
+          description: Average time a customer stays to eat (expressed in minutes)
+          example: 40
+
+        tot_reviews:
+          minimum: 0
+          readOnly: true
+          type: integer
+          description: Total restaurant reviews
+          example: 42
+        avg_rating:
+          minimum: 0
+          maximum: 5
+          readOnly: true
+          type: number
+          description: Restaurant average rating
+          example: 3.5
+        likes:
+          minimum: 0
+          readOnly: true
+          type: integer
+          description: Restaurant likes
+          example: 100
+    Table:
+      required:
+      - name
+      - capacity
       type: object
       properties:
         id:
@@ -65,29 +157,13 @@ components:
           readOnly: true
           example: 123
         name:
-          maxLength: 100
+          maxLength: 128
           minLength: 1
           type: string
-          description: Restaurant's name
-          example: "My Pizza Restaurant"
-        likes:
-          minLength: 1
+          description: Table's name
+          example: "yellow-table"
+        capacity:
+          minimum: 1
           type: integer
-          description: Restaurant Rating
+          description: Table capacity
           example: 42
-        lat:
-          type: number
-          description: Restaurant Latitude
-          example: 42.42
-        lon:
-          type: number
-          description: Restaurant Longitude
-          example: 42.42
-        phone:
-          type: string
-          minLength: 5
-          maxLength: 50
-          description: Restaurant Phone Number
-          example: "050123456"
-       
-  

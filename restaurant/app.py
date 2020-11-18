@@ -14,7 +14,7 @@ application = app.app
 @application.teardown_appcontext
 def shutdown_session(exception=None):
     database.db_session.remove()
-
+    
 
 if __name__ == '__main__':
     app.run(port=5060)
