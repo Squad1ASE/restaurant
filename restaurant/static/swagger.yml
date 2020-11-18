@@ -20,10 +20,29 @@ paths:
               schema:
                 type: object
                 properties:
-                  pets:
+                  restaurants:
                     type: array
                     items:
                       $ref: '#/components/schemas/Restaurant'
+                      
+    put:
+      tags:
+      - Restaurants
+      summary: Get all restaurants
+      operationId: views.restaurant.create_restaurant
+
+      requestBody:
+        description: Restaurant to create
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Restaurant'
+
+      responses:
+        200:
+          description: Successfully create the restaurant
+                      
   /restaurants/{restaurant_id}:
     get:
       tags:
@@ -48,30 +67,37 @@ paths:
         404:
           description: Restaurant does not exist
           content: {}
+
 components:
   schemas:
     Restaurant:
       required:
+      - id
       - owner_id
       - name
       - lat
       - lon
       - phone
+      - capacity
       - prec_measures
       - cuisine_type
       - avg_time_of_stay
+      - tot_reviews
+      - avg_rating
+      - likes
       - tables
       type: object
       properties:
         id:
+          minimum: 1
           type: integer
           description: Unique identifier
           readOnly: true
           example: 123
         owner_id:
+          minimum: 1
           type: integer
           description: Unique identifier of restaurant owner
-          readOnly: true
           example: 123
         name:
           maxLength: 128
@@ -79,7 +105,6 @@ components:
           type: string
           description: Restaurant's name
           example: "My Pizza Restaurant"
-        
         lat:
           type: number
           description: Restaurant latitude
@@ -94,7 +119,6 @@ components:
           maxLength: 128
           description: Restaurant phone number
           example: "050123456"
-        
         capacity:
           type: integer
           description: Restaurant capacity
@@ -102,11 +126,9 @@ components:
           example: 35
         prec_measures:
           maxLength: 128
-          minLength: 1
           type: string
           description: Precautionary measures taken by the restaurant
           example: "Adopted the measures envisaged by the DPCM 'X'"
-
         cuisine_type:
           type: array
           minItems: 1
@@ -115,17 +137,16 @@ components:
             type: string
             minLength: 1
             maxLength: 128
+            enum: [traditional, italian, mexican, chinese, pizzeria]
             description: Cuisine type
             example: "italian"
           description: List of restaurant cuisine types
           example: ["italian", "traditional"]
-
         avg_time_of_stay:
           minimum: 15
           type: integer
           description: Average time a customer stays to eat (expressed in minutes)
           example: 40
-
         tot_reviews:
           minimum: 0
           readOnly: true
@@ -145,6 +166,12 @@ components:
           type: integer
           description: Restaurant likes
           example: 100
+        tables:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Table'
+          description: List of restaurant tables
     Table:
       required:
       - name

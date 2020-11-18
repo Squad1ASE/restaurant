@@ -20,6 +20,7 @@ def init_db():
         db.metadata.create_all(bind=engine)
         q = db_session.query(Restaurant).filter(Restaurant.id == 1)
         restaurant = q.first()
+        '''
         if restaurant is None:
             example = Restaurant()
             example.name = 'Trial Restaurant'
@@ -29,6 +30,7 @@ def init_db():
             example.lon = 10.408347
             db_session.add(example)
             db_session.commit()
+        '''
     except Exception as e:
         print(e)
 
@@ -50,9 +52,11 @@ class FormEnum(Enum):
     def __lt__(self, other):
         return self.value < other.value
 
+CUISINE_TYPES = ['italian', 'mexican', 'chinese', 'pizzeria']
 
 class Restaurant(db):
     __tablename__ = 'restaurant'
+
 
     class CUISINE_TYPES(FormEnum):
         italiana = 1
@@ -64,7 +68,7 @@ class Restaurant(db):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    owner_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    owner_id = Column(Integer, CheckConstraint('owner_id > 0'), nullable=False)
 
     name = Column(Unicode(128), CheckConstraint('length(name) > 0'), nullable=False)
     lat = Column(Float, nullable=False) 
