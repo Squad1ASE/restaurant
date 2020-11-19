@@ -5,6 +5,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker, backref, relationship, 
 from sqlalchemy.ext.declarative import declarative_base
 from enum import Enum
 import time
+import inspect
 
 
 #DATABASEURI = os.environ['DATABASE_URI']
@@ -35,36 +36,12 @@ def init_db():
         print(e)
 
 
-# class that the enums used in the underlying classes 
-# should inherit to facilitate their management in forms
-class FormEnum(Enum):
-    @classmethod
-    def choices(cls):
-        return [(choice, choice.name) for choice in cls]
+CUISINE_TYPES = ['traditional', 'italian', 'mexican', 'chinese', 'pizzeria']
 
-    @classmethod
-    def coerce(cls, item):
-        return cls(int(item)) if not isinstance(item, cls) else item
-
-    def __str__(self):
-        return str(self.value)
-
-    def __lt__(self, other):
-        return self.value < other.value
-
-CUISINE_TYPES = ['italian', 'mexican', 'chinese', 'pizzeria']
 
 class Restaurant(db):
     __tablename__ = 'restaurant'
 
-
-    class CUISINE_TYPES(FormEnum):
-        italiana = 1
-        cinese = 2
-        messicana = 3
-        giapponese = 4
-        fast_food = 5
-        pizzeria = 6
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -98,13 +75,17 @@ class Restaurant(db):
     @validates('cuisine_type')
     def validate_cuisine_type(self, key, cuisine_types):
         if not isinstance(cuisine_types, list): raise ValueError("cuisine_type is not a list")
-        if any(not isinstance(i, Restaurant.CUISINE_TYPES) for i in cuisine_types): raise ValueError("cuisine_type elements are not CUISINE_TYPES")
+        if any(i not in CUISINE_TYPES for i in cuisine_types): raise ValueError("cuisine_type elements are not strings")
         if (len(cuisine_types) == 0): raise ValueError("cuisine_type is empty")
         return cuisine_types
 
     def serialize(self):
-        complex_fields = ['cuisine_type', 'tables']
-        serialized = dict([(k,v) for k,v in self.__dict__.items() if k not in complex_fields])
+        complex_fields = ['tables']
+        serialized = dict([(k,v) for k,v in self.__dict__.items() if k not in complex_fields and k[0] != '_' and not inspect.ismethod(v)])
+        tables = []
+        for table in self.tables:
+            tables.append(table.serialize())
+        serialized['tables'] = tables
         return serialized
 
 
@@ -113,7 +94,6 @@ class Table(db):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     restaurant_id = Column(Integer, ForeignKey('restaurant.id'), nullable=False)
-    #restaurant = relationship('Restaurant', foreign_keys='Table.restaurant_id',  backref=backref('tables', cascade="all, delete-orphan")) 
 
     name = Column(Unicode(128), CheckConstraint('length(name) > 0'), nullable=False)   
     capacity = Column(Integer, CheckConstraint('capacity > 0'), nullable=False)
@@ -137,7 +117,7 @@ class Table(db):
         return capacity
 
     def serialize(self):
-        return dict([(k,v) for k,v in self.__dict__.items()])
+        return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
 
 
 '''

@@ -23,14 +23,12 @@ paths:
                   restaurants:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Restaurant'
-                      
+                      $ref: '#/components/schemas/Restaurant'              
     put:
       tags:
       - Restaurants
       summary: Get all restaurants
       operationId: views.restaurant.create_restaurant
-
       requestBody:
         description: Restaurant to create
         required: true
@@ -38,10 +36,14 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Restaurant'
-
       responses:
         200:
-          description: Successfully create the restaurant
+          description: Restaurant successfully created
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Restaurant successfully created
                       
   /restaurants/{restaurant_id}:
     get:
@@ -54,9 +56,10 @@ paths:
         in: path
         description: Restaurant's Unique identifier
         required: true
+        example: 12
         schema:
-          pattern: ^[a-zA-Z0-9-]+$
-          type: string
+          type: integer
+          minimum: 1
       responses:
         200:
           description: Return restaurant
@@ -66,7 +69,54 @@ paths:
                 $ref: '#/components/schemas/Restaurant'
         404:
           description: Restaurant does not exist
-          content: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+
+    post:
+      tags:
+      - Restaurants
+      summary: Edit a restaurant
+      operationId: views.restaurant.edit_restaurant
+      parameters:
+      - name: restaurant_id
+        in: path
+        description: Restaurant's Unique identifier
+        required: true
+        example: 12
+        schema:
+          type: integer
+          minimum: 1
+
+      requestBody:
+        description: Restaurant info to edit
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  $ref: '#/components/schemas/Restaurant/properties/phone'
+                tables:
+                  $ref: '#/components/schemas/Restaurant/properties/tables'
+              minProperties: 1
+
+      responses:
+        200:
+          description: Restaurant successfully edited
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Restaurant successfully edited
+        404:
+          description: Restaurant does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
 
 components:
   schemas:
@@ -174,6 +224,8 @@ components:
           description: List of restaurant tables
     Table:
       required:
+      - id
+      - restaurant_id
       - name
       - capacity
       type: object
@@ -181,6 +233,12 @@ components:
         id:
           type: integer
           description: Unique identifier
+          readOnly: true
+          example: 123
+        restaurant_id:
+          minimum: 1
+          type: integer
+          description: Unique identifier of restaurant
           readOnly: true
           example: 123
         name:
@@ -193,4 +251,36 @@ components:
           minimum: 1
           type: integer
           description: Table capacity
-          example: 42
+          example: 5
+    Error404:
+      required:
+      - detail
+      - status
+      - title
+      - type
+      type: object
+      properties:
+        detail:
+          minLength: 1
+          type: string
+          description: Error detail
+          readOnly: true
+          example: "There is no restaurant with the specified id"
+        status:
+          minimum: 0
+          type: integer
+          description: Status code
+          readOnly: true
+          example: 404
+        title:
+          minLength: 1
+          type: string
+          description: Error title
+          readOnly: true
+          example: "Not found"
+        type:
+          minLength: 1
+          type: string
+          description: Error type
+          readOnly: true
+          example: "about:blank"
