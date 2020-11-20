@@ -23,11 +23,18 @@ paths:
                   restaurants:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Restaurant'              
+                      $ref: '#/components/schemas/Restaurant'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+             
     put:
       tags:
       - Restaurants
-      summary: Get all restaurants
+      summary: Create a new restaurant
       operationId: views.restaurant.create_restaurant
       requestBody:
         description: Restaurant to create
@@ -44,7 +51,56 @@ paths:
               schema:
                 type: string
                 example: Restaurant successfully created
-                      
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Request body is not valid JSON"
+                status: 400
+                title: "Bad Request"
+                type: "about:blank"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      tags:
+      - Restaurants
+      summary: Delete all restaurants of an owner
+      operationId: views.restaurant.delete_restaurants
+      requestBody:
+        description: Unique ID of the restaurants owner
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - owner_id
+              type: object
+              properties:
+                owner_id:
+                  $ref: '#/components/schemas/Restaurant/properties/owner_id'
+      responses:
+        200:
+          description: Restaurants successfully deleted
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Restaurants successfully deleted
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
   /restaurants/{restaurant_id}:
     get:
       tags:
@@ -67,12 +123,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Restaurant'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "'restaurant_id' must be greater than 0"
+                status: 400
+                title: "Bad Request"
+                type: "about:blank"
         404:
           description: Restaurant does not exist
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error404'
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "There is no restaurant with the specified id"
+                status: 404
+                title: "Not found"
+                type: "about:blank"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
     post:
       tags:
@@ -83,26 +161,28 @@ paths:
       - name: restaurant_id
         in: path
         description: Restaurant's Unique identifier
-        required: true
+        required: true 
         example: 12
         schema:
           type: integer
           minimum: 1
-
       requestBody:
         description: Restaurant info to edit
         required: true
         content:
           application/json:
             schema:
+              required:
+              - owner_id
               type: object
               properties:
+                owner_id:
+                  $ref: '#/components/schemas/Restaurant/properties/owner_id'
                 phone:
                   $ref: '#/components/schemas/Restaurant/properties/phone'
                 tables:
                   $ref: '#/components/schemas/Restaurant/properties/tables'
-              minProperties: 1
-
+              minProperties: 2
       responses:
         200:
           description: Restaurant successfully edited
@@ -111,12 +191,119 @@ paths:
               schema:
                 type: string
                 example: Restaurant successfully edited
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Request body is not valid JSON"
+                status: 400
+                title: "Bad Request"
+                type: "about:blank"
+        403:
+          description: Specified owner_id is not the restaurant owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Specified owner_id is not the restaurant owner"
+                status: 403
+                title: "Forbidden"
+                type: "about:blank"
         404:
           description: Restaurant does not exist
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error404'
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "There is no restaurant with the specified id"
+                status: 404
+                title: "Not found"
+                type: "about:blank"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+      - Restaurants
+      summary: Delete a restaurant
+      operationId: views.restaurant.delete_restaurant
+      parameters:
+      - name: restaurant_id
+        in: path
+        description: Restaurant's Unique identifier
+        required: true 
+        example: 12
+        schema:
+          type: integer
+          minimum: 1
+      requestBody:
+        description: Unique ID of the restaurant owner
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - owner_id
+              type: object
+              properties:
+                owner_id:
+                  $ref: '#/components/schemas/Restaurant/properties/owner_id'
+      responses:
+        200:
+          description: Restaurant successfully deleted
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Restaurant successfully deleted
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Request body is not valid JSON"
+                status: 400
+                title: "Bad Request"
+                type: "about:blank"
+        403:
+          description: Specified owner_id is not the restaurant owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Specified owner_id is not the restaurant owner"
+                status: 403
+                title: "Forbidden"
+                type: "about:blank"
+        404:
+          description: Restaurant does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "There is no restaurant with the specified id"
+                status: 404
+                title: "Not found"
+                type: "about:blank"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   schemas:
@@ -252,7 +439,7 @@ components:
           type: integer
           description: Table capacity
           example: 5
-    Error404:
+    Error:
       required:
       - detail
       - status
@@ -265,19 +452,19 @@ components:
           type: string
           description: Error detail
           readOnly: true
-          example: "There is no restaurant with the specified id"
+          example: "The server encountered an internal error and was unable to complete your request"
         status:
           minimum: 0
           type: integer
           description: Status code
           readOnly: true
-          example: 404
+          example: 500
         title:
           minLength: 1
           type: string
           description: Error title
           readOnly: true
-          example: "Not found"
+          example: "Internal Server Error"
         type:
           minLength: 1
           type: string

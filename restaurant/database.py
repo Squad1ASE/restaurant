@@ -41,7 +41,7 @@ CUISINE_TYPES = ['traditional', 'italian', 'mexican', 'chinese', 'pizzeria']
 
 class Restaurant(db):
     __tablename__ = 'restaurant'
-
+    __table_args__ = {'sqlite_autoincrement': True}
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -91,6 +91,7 @@ class Restaurant(db):
 
 class Table(db):
     __tablename__ = 'table'
+
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     restaurant_id = Column(Integer, ForeignKey('restaurant.id'), nullable=False)
@@ -240,3 +241,33 @@ class Review(db):
 
 
 '''
+
+# Table to track deleted databases.
+# The information contained in it will allow the celery tasks to complete
+# the cancellation by asynchronously deleting Likes, Reviews and Reservations
+class RestaurantDeleted(db):
+    __tablename__ = 'restaurant_deleted'
+
+    id = Column(Integer, primary_key=True)
+
+    likes_deleted = Column(Boolean, default=False)
+    reviews_deleted = Column(Boolean, default=False)
+    reservations_service_notified = Column(Boolean, default=False)
+        
+    @validates('likes_deleted')
+    def validate_pending(self, key, likes_deleted):
+        if (likes_deleted is None): raise ValueError("likes_deleted is None")
+        return likes_deleted
+
+    @validates('reviews_deleted')
+    def validate_pending(self, key, reviews_deleted):
+        if (reviews_deleted is None): raise ValueError("reviews_deleted is None")
+        return reviews_deleted
+
+    @validates('reservations_service_notified')
+    def validate_pending(self, key, reservations_service_notified):
+        if (reservations_service_notified is None): raise ValueError("reservations_service_notified is None")
+        return reservations_service_notified
+
+    def serialize(self):
+        return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
