@@ -37,6 +37,7 @@ def init_db():
 
 
 CUISINE_TYPES = ['traditional', 'italian', 'mexican', 'chinese', 'pizzeria']
+WEEK_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 
 class Restaurant(db):
@@ -65,6 +66,8 @@ class Restaurant(db):
     likes = Column(Integer, CheckConstraint('likes >= 0'), default=0)    # periodically updated in background
 
     tables = relationship("Table", cascade="all,delete,delete-orphan", backref="restaurant")
+    working_days = relationship("WorkingDay", cascade="all,delete,delete-orphan", backref="restaurant")
+    dishes = relationship("Dish", cascade="all,delete,delete-orphan", backref="restaurant")
 
     @validates('owner_id')
     def validate_owner_id(self, key, owner_id):
@@ -80,12 +83,18 @@ class Restaurant(db):
         return cuisine_types
 
     def serialize(self):
-        complex_fields = ['tables']
+        complex_fields = ['tables', 'working_days']
         serialized = dict([(k,v) for k,v in self.__dict__.items() if k not in complex_fields and k[0] != '_' and not inspect.ismethod(v)])
-        tables = []
+        tables, working_days, dishes = [], [], []
         for table in self.tables:
             tables.append(table.serialize())
         serialized['tables'] = tables
+        for wd in self.working_days:
+            working_days.append(wd.serialize())
+        serialized['working_days'] = working_days
+        for dish in self.dishes:
+            dishes.append(dish.serialize())
+        serialized['dishes'] = dishes
         return serialized
 
 
@@ -121,23 +130,12 @@ class Table(db):
         return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
 
 
-'''
 class WorkingDay(db):
     __tablename__ = 'working_day'
 
-    class WEEK_DAYS(FormEnum):
-        monday = 1
-        tuesday = 2
-        wednesday = 3
-        thursday = 4
-        friday = 5
-        saturday = 6
-        sunday = 7
-
     restaurant_id = Column(Integer, ForeignKey('restaurant.id'), nullable=False, primary_key=True)
-    restaurant = relationship('Restaurant', foreign_keys='WorkingDay.restaurant_id', backref=backref('workdays', cascade="all, delete-orphan"))  
 
-    day = Column(PickleType, nullable=False, primary_key=True)
+    day = Column(Unicode(128), nullable=False, primary_key=True)
     work_shifts = Column(PickleType, nullable=False)  
 
     @validates('restaurant_id')
@@ -148,8 +146,8 @@ class WorkingDay(db):
         
     @validates('day')
     def validate_day(self, key, day):
-        if (day is None): raise ValueError("day is None")
-        if not isinstance(day, WorkingDay.WEEK_DAYS): raise ValueError("day is not a WEEK_DAYS")
+        if day is None: raise ValueError("day is None")
+        if day not in WEEK_DAYS: raise ValueError("day is not a week day")
         return day
 
     @validates('work_shifts')
@@ -160,20 +158,23 @@ class WorkingDay(db):
         if (len(work_shifts) > 2): raise ValueError("work_shifts can contains at most two shifts")
         last = None
         for shift in work_shifts:
-            if not isinstance(shift, tuple): raise ValueError("work_shifts element is not a list")
-            if (len(shift) != 2): raise ValueError("work_shifts element is not a pair")
+            if not isinstance(shift, list): raise ValueError("work_shift element is not a list")
+            if (len(shift) != 2): raise ValueError("work_shift element is not a pair")
             for hour_to_check in shift:
                 try:
                     hour = time.strptime(hour_to_check, '%H:%M')
-                    if last is None:
-                        last = hour
-                    else:
-                        if last >= hour:
-                            raise ValueError("work_shifts contains non-incremental times")
-                        last = hour
                 except:
                     raise ValueError("incorrect format for hour")
+                if last is None:
+                    last = hour
+                else:
+                    if last >= hour:
+                        raise ValueError("the hours provided must be in ascending order")
+                    last = hour     
         return work_shifts
+
+    def serialize(self):
+        return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
 
 
 class Dish(db):
@@ -181,9 +182,8 @@ class Dish(db):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     restaurant_id = Column(Integer, ForeignKey('restaurant.id'), nullable=False)
-    restaurant = relationship('Restaurant', foreign_keys='Dish.restaurant_id', backref=backref('dishes', cascade="all, delete-orphan"))
 
-    dish_name = Column(Unicode(128), CheckConstraint('length(dish_name) > 0'), nullable=False)
+    name = Column(Unicode(128), CheckConstraint('length(name) > 0'), nullable=False)
     price = Column(Float, CheckConstraint('price>0'), nullable=False)
     ingredients = Column(Unicode(128), CheckConstraint('length(ingredients) > 0'), nullable=False)
 
@@ -193,11 +193,11 @@ class Dish(db):
         if (restaurant_id <= 0): raise ValueError("restaurant_id must be > 0")
         return restaurant_id
 
-    @validates('dish_name')
-    def validate_dish_name(self, key, dish_name):
-        if (dish_name is None): raise ValueError("dish_name is None")
-        if (len(dish_name) == 0): raise ValueError("dish_name is empty")
-        return dish_name
+    @validates('name')
+    def validate_name(self, key, name):
+        if (name is None): raise ValueError("name is None")
+        if (len(name) == 0): raise ValueError("name is empty")
+        return name
 
     @validates('price')
     def validate_price(self, key, price):
@@ -211,8 +211,11 @@ class Dish(db):
         if (len(ingredients) == 0): raise ValueError("ingredients is empty")
         return ingredients
 
+    def serialize(self):
+        return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
 
 
+'''
 class Like(db):
     __tablename__ = 'like'
 
@@ -255,19 +258,24 @@ class RestaurantDeleted(db):
     reservations_service_notified = Column(Boolean, default=False)
         
     @validates('likes_deleted')
-    def validate_pending(self, key, likes_deleted):
-        if (likes_deleted is None): raise ValueError("likes_deleted is None")
-        return likes_deleted
+    def validate_likes_deleted(self, key, value):
+        return _validate_boolean(key, value)
 
     @validates('reviews_deleted')
-    def validate_pending(self, key, reviews_deleted):
-        if (reviews_deleted is None): raise ValueError("reviews_deleted is None")
-        return reviews_deleted
+    def validate_reviews_deleted(self, key, value):
+        return _validate_boolean(key, value)
 
     @validates('reservations_service_notified')
-    def validate_pending(self, key, reservations_service_notified):
-        if (reservations_service_notified is None): raise ValueError("reservations_service_notified is None")
-        return reservations_service_notified
+    def validate_reservations_service_notified(self, key, value):
+        return _validate_boolean(key, value)
 
     def serialize(self):
         return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
+
+
+
+# private validators
+def _validate_boolean(key, value):
+    if value is None: raise ValueError(str(key) + " is None")
+    if not isinstance(value, bool): raise ValueError(str(key) + " is not a boolean")
+    return value

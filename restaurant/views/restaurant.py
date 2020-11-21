@@ -1,5 +1,5 @@
 import connexion
-from database import db_session, Restaurant, Table, RestaurantDeleted
+from database import db_session, Restaurant, Table, WorkingDay, Dish, RestaurantDeleted
 from flask import request, jsonify, abort, make_response
 import json
 
@@ -7,6 +7,7 @@ import json
 def create_restaurant():
     request_dict = request.json
 
+    # tables
     new_tables = []
     tot_capacity = 0
     tables = request_dict.pop('tables')
@@ -15,9 +16,32 @@ def create_restaurant():
         tot_capacity += new_table.capacity
         new_tables.append(new_table)
 
+    # working days
+    new_wds, days_already_present = [], []
+    working_days = request_dict.pop('working_days')
+    for wd in working_days:
+        if wd['day'] in days_already_present:
+            return connexion.problem(400, "Bad Request", "There are two working days with the same day of the week")
+        try:
+            new_wd = WorkingDay(**wd)
+            new_wds.append(new_wd)
+        except ValueError as e:
+            return connexion.problem(400, "Bad Request", str(e))
+        days_already_present.append(wd['day'])
+
+    # dishes
+    new_dishes = []
+    dishes = request_dict.pop('dishes')
+    for dish in dishes:
+        new_dish = Dish(**dish)
+        new_dishes.append(new_dish)
+
+    # restaurant
     new_restaurant = Restaurant(**request_dict)
     new_restaurant.capacity = tot_capacity
     new_restaurant.tables = new_tables
+    new_restaurant.working_days = new_wds
+    new_restaurant.dishes = new_dishes
 
     db_session.add(new_restaurant)
     db_session.commit()
@@ -27,7 +51,11 @@ def create_restaurant():
 
 def get_restaurants():  
     q = db_session.query(Table).all()
-    print('TABLE LEN: ', len(q))
+    print('Table LEN: ', len(q))
+    q = db_session.query(WorkingDay).all()
+    print('WorkingDay LEN: ', len(q))
+    q = db_session.query(Dish).all()
+    print('Dish LEN: ', len(q))
     q = db_session.query(RestaurantDeleted).all()
     print('RestaurantDeleted LEN: ', len(q))
     for r in q:
@@ -76,17 +104,13 @@ def edit_restaurant(restaurant_id):
     if restaurant.owner_id != request_dict['owner_id']:
         return connexion.problem(403, "Forbidden", "Specified owner_id is not the restaurant owner")
 
-    tables = request_dict.pop('tables', None)
-    if tables is not None:
-        new_tables = []
-        tot_capacity = 0
-        for table in tables:
-            new_table = Table(**table)
-            tot_capacity += new_table.capacity
-            new_tables.append(new_table)
-        
-        restaurant.capacity = tot_capacity
-        restaurant.tables = new_tables
+    dishes = request_dict.pop('dishes', None)
+    if dishes is not None:
+        new_dishes = []
+        for dish in dishes:
+            new_dish = Dish(**dish)
+            new_dishes.append(new_dish)
+        restaurant.dishes = new_dishes
 
     new_phone = request_dict.pop('phone', None)
     if new_phone is not None:
