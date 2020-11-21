@@ -253,10 +253,20 @@ class RestaurantDeleted(db):
 
     id = Column(Integer, primary_key=True)
 
+    name = Column(Unicode(128), CheckConstraint('length(name) > 0'), nullable=False)
+
     likes_deleted = Column(Boolean, default=False)
     reviews_deleted = Column(Boolean, default=False)
     reservations_service_notified = Column(Boolean, default=False)
         
+    @validates('id')
+    def validate_id(self, key, value):
+        return _validate_integer(key, value)
+
+    @validates('name')
+    def validate_name(self, key, value):
+        return _validate_string(key, value)
+    
     @validates('likes_deleted')
     def validate_likes_deleted(self, key, value):
         return _validate_boolean(key, value)
@@ -273,9 +283,26 @@ class RestaurantDeleted(db):
         return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
 
 
-
 # private validators
 def _validate_boolean(key, value):
     if value is None: raise ValueError(str(key) + " is None")
     if not isinstance(value, bool): raise ValueError(str(key) + " is not a boolean")
+    return value
+
+def _validate_integer(key, value, greater_than=0):
+    if value is None: raise ValueError(str(key) + " is None")
+    if not isinstance(value, int): raise ValueError(str(key) + " is not an integer")
+    if value <= greater_than: raise ValueError(str(key) + " must be greater than " + str(greater_than))
+    return value
+
+def _validate_float(key, value, greater_than=0):
+    if value is None: raise ValueError(str(key) + " is None")
+    if not isinstance(value, float): raise ValueError(str(key) + " is not a float")
+    if value <= greater_than: raise ValueError(str(key) + " must be greater than " + str(greater_than))
+    return value
+
+def _validate_string(key, value, greater_than=0):
+    if value is None: raise ValueError(str(key) + " is None")
+    if not isinstance(value, str): raise ValueError(str(key) + " is not a string")
+    if len(value) <= greater_than: raise ValueError(str(key) + " must be greater than " + str(greater_than))
     return value

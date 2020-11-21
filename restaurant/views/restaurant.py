@@ -1,6 +1,6 @@
 import connexion
 from database import db_session, Restaurant, Table, WorkingDay, Dish, RestaurantDeleted
-from flask import request, jsonify, abort, make_response
+from flask import request
 import json
 
 
@@ -50,6 +50,10 @@ def create_restaurant():
 
 
 def get_restaurants():  
+    #args = request.args.to_dict()
+    #if 'key' in args:
+    #    args['key']
+
     q = db_session.query(Table).all()
     print('Table LEN: ', len(q))
     q = db_session.query(WorkingDay).all()
@@ -76,6 +80,7 @@ def delete_restaurants():
             # reservations relating to the restaurant are deleted asynchronously
             restaurant_deleted = RestaurantDeleted()
             restaurant_deleted.id = restaurant.id
+            restaurant_deleted.name = restaurant.name
             db_session.add(restaurant_deleted)
 
             # dishes, working days and tables are deleted on cascade
@@ -135,6 +140,7 @@ def delete_restaurant(restaurant_id):
     # reservations relating to the restaurant are deleted asynchronously
     restaurant_deleted = RestaurantDeleted()
     restaurant_deleted.id = restaurant_id
+    restaurant_deleted.name = restaurant.name
     db_session.add(restaurant_deleted)
 
     # dishes, working days and tables are deleted on cascade
