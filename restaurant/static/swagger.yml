@@ -12,6 +12,23 @@ paths:
       - Restaurants
       summary: Get all restaurants
       operationId: views.restaurant.get_restaurants
+      parameters:
+      - name: owner_id
+        in: query
+        schema:
+          $ref: '#/components/schemas/Restaurant/properties/owner_id'
+      - name: name
+        in: query
+        schema:
+          $ref: '#/components/schemas/Restaurant/properties/name'
+      - name: lat
+        in: query
+        schema:
+          $ref: '#/components/schemas/Restaurant/properties/lat'
+      - name: lon
+        in: query
+        schema:
+          $ref: '#/components/schemas/Restaurant/properties/lon'
       responses:
         200:
           description: Return all restaurants
@@ -305,6 +322,118 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /restaurants/{restaurant_id}/tables:
+    get:
+      tags:
+      - Restaurants
+      summary: Get the tables of the specified restaurant
+      operationId: views.restaurant.get_restaurant_tables
+      parameters:
+      - name: restaurant_id
+        in: path
+        description: Restaurant's Unique identifier
+        required: true
+        example: 12
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        200:
+          description: Return restaurant's tables
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Table'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "'restaurant_id' must be greater than 0"
+                status: 400
+                title: "Bad Request"
+                type: "about:blank"
+        404:
+          description: Restaurant does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "There is no restaurant with the specified id"
+                status: 404
+                title: "Not found"
+                type: "about:blank"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /restaurants/{restaurant_id}/working_days:
+    get:
+      tags:
+      - Restaurants
+      summary: Get the working days of the specified restaurant
+      operationId: views.restaurant.get_restaurant_working_days
+      parameters:
+      - name: restaurant_id
+        in: path
+        description: Restaurant's Unique identifier
+        required: true
+        example: 12
+        schema:
+          type: integer
+          minimum: 1
+      responses:
+        200:
+          description: Return restaurant's working days
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restaurants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkingDay'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "'restaurant_id' must be greater than 0"
+                status: 400
+                title: "Bad Request"
+                type: "about:blank"
+        404:
+          description: Restaurant does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "There is no restaurant with the specified id"
+                status: 404
+                title: "Not found"
+                type: "about:blank"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
 components:
   schemas:
     Restaurant:
@@ -347,11 +476,11 @@ components:
         lat:
           type: number
           description: Restaurant latitude
-          example: 42.42
+          example: 43.7216621
         lon:
           type: number
           description: Restaurant longitude
-          example: 42.42
+          example: 10.4083723
         phone:
           type: string
           minLength: 1

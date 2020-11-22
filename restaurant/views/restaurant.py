@@ -1,6 +1,7 @@
 import connexion
 from database import db_session, Restaurant, Table, WorkingDay, Dish, RestaurantDeleted
 from flask import request
+from sqlalchemy import or_, and_
 import json
 
 
@@ -49,24 +50,32 @@ def create_restaurant():
     return 'Restaurant successfully created'
 
 
-def get_restaurants():  
-    #args = request.args.to_dict()
-    #if 'key' in args:
-    #    args['key']
+def get_restaurants():
+    owner_id = request.args['owner_id'] if 'owner_id' in request.args else None
+    name = request.args['name'] if 'name' in request.args else None
+    lat = request.args['lat'] if 'lat' in request.args else None
+    lon = request.args['lon'] if 'lon' in request.args else None
 
-    q = db_session.query(Table).all()
-    print('Table LEN: ', len(q))
-    q = db_session.query(WorkingDay).all()
-    print('WorkingDay LEN: ', len(q))
-    q = db_session.query(Dish).all()
-    print('Dish LEN: ', len(q))
-    q = db_session.query(RestaurantDeleted).all()
-    print('RestaurantDeleted LEN: ', len(q))
-    for r in q:
-        print(r.serialize())
+    q = db_session.query(Restaurant)
+    
+    if owner_id is not None:
+        q.filter(Restaurant.owner_id == owner_id)
+    
+    if name is not None:
+        q.filter(Restaurant.name.contains(name))
 
-    q = db_session.query(Restaurant).all()
-    return [p.serialize() for p in q]
+    if (lat is not None and lon is None) or (lat is None and lon is not None):
+        return connexion.problem(400, "Bad Request", "'lat' and 'lon' must be provided together")
+    if lat is not None and lon is not None:
+        q.filter(
+            and_(
+                and_(Restaurant.lat >= Restaurant.lat - 0.02, Restaurant.lat <= Restaurant.lat + 0.02),
+                and_(Restaurant.lon >= Restaurant.lon - 0.02, Restaurant.lon <= Restaurant.lon + 0.02)    
+            )
+        )
+
+    restaurants = q.all()
+    return [p.serialize() for p in restaurants]
 
 
 def delete_restaurants():
@@ -148,3 +157,19 @@ def delete_restaurant(restaurant_id):
     db_session.commit()
 
     return 'Restaurant successfully deleted'
+
+
+def get_restaurant_tables(restaurant_id):
+    q = db_session.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    if q is not None:
+        return q.serialize()['tables']
+    else:
+        return connexion.problem(404, "Not found", "There is no restaurant with the specified id")
+
+
+def get_restaurant_working_days(restaurant_id):
+    q = db_session.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    if q is not None:
+        return q.serialize()['working_days']
+    else:
+        return connexion.problem(404, "Not found", "There is no restaurant with the specified id")
