@@ -73,9 +73,13 @@ class Restaurant(db):
     def validate_positive_integer(self, key, value):
         return _validate_integer(key, value)
 
-    @validates('name','phone', 'prec_measures')
-    def validate_string(self, key, value):
+    @validates('name', 'phone')
+    def validate_string_not_empty(self, key, value):
         return _validate_string(key, value)
+
+    @validates('prec_measures')
+    def validate_prec_measures(self, key, value):
+        return _validate_string(key, value, None)
 
     @validates('lat', 'lon')
     def validate_position(self, key, value):
@@ -283,7 +287,7 @@ def _validate_integer(key, value, greater_than=0):
 
 def _validate_float(key, value, min_value=0, max_value=None):
     if value is None: raise ValueError(str(key) + " is None")
-    if not isinstance(value, float): raise ValueError(str(key) + " is not a float")
+    if not isinstance(value, float) and not isinstance(value, int): raise ValueError(str(key) + " is not a float or int")
     if min_value is not None and value < min_value: 
         raise ValueError(str(key) + " must be greater or equal than " + str(min_value))
     if max_value is not None and value > max_value: 
@@ -293,5 +297,6 @@ def _validate_float(key, value, min_value=0, max_value=None):
 def _validate_string(key, value, greater_than=0):
     if value is None: raise ValueError(str(key) + " is None")
     if not isinstance(value, str): raise ValueError(str(key) + " is not a string")
-    if len(value) <= greater_than: raise ValueError(str(key) + " must be greater than " + str(greater_than))
+    if greater_than is not None:
+        if len(value) <= greater_than: raise ValueError(str(key) + " must be greater than " + str(greater_than))
     return value

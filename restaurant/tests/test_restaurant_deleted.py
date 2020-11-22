@@ -1,5 +1,4 @@
 from tests.conftest import test_app
-
 from database import db_session, RestaurantDeleted
 from sqlalchemy import exc
 
@@ -18,6 +17,7 @@ def _check_restaurants_deleted(restaurant_deleted, dict_restaurant_deleted):
         assert restaurant_deleted.reservations_service_notified == dict_restaurant_deleted['reservations_service_notified'] 
     else:
         assert restaurant_deleted.reservations_service_notified == False
+    assert restaurant_deleted.serialize() is not None
 
 
 # --- UNIT TESTS ---
@@ -98,11 +98,3 @@ def test_insertDB_restaurant_deleted(test_app):
     # check total restaurants_deleted
     restaurants_deleted = db_session.query(RestaurantDeleted).all()
     assert len(restaurants_deleted) == len(correct_restaurants_deleted)
-
-
-def test_check_02 (test_app):
-    app, test_client = test_app
-    
-    q = db_session.query(RestaurantDeleted).all()
-    print('RestaurantDeleted LEN: ', len(q))
-    assert len(q) == 0
