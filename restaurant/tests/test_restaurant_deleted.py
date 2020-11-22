@@ -24,7 +24,7 @@ def _check_restaurants_deleted(restaurant_deleted, dict_restaurant_deleted):
 def test_insertDB_restaurant_deleted(test_app):
     app, test_client = test_app
     
-    # incorrect mandatory fields with validators
+    # incorrect fields with validators
     incorrect_restaurants_deleted = [
     dict(id=None, name='trial'),
     dict(id=0, name='trial'),
@@ -33,6 +33,12 @@ def test_insertDB_restaurant_deleted(test_app):
         dict(id=1, name=''),
         dict(id=1, name=[]),
         dict(id=1, name=0),
+        dict(id=2, name='trial', likes_deleted=1),
+        dict(id=2, name='trial', likes_deleted='a'),
+        dict(id=2, name='trial', reviews_deleted=1),
+        dict(id=2, name='trial', reviews_deleted='a'),
+        dict(id=2, name='trial', reservations_service_notified=1),
+        dict(id=2, name='trial', reservations_service_notified='a'),
     ]
     count_assert = 0
     for r in incorrect_restaurants_deleted:

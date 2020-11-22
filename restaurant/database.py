@@ -12,8 +12,7 @@ import inspect
 db = declarative_base()
 #engine = create_engine(DATABASEURI, convert_unicode=True)
 engine = create_engine('sqlite:///restaurant.db', convert_unicode=True)
-db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False,
-                                             bind=engine))
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 
 def init_db():
@@ -36,6 +35,7 @@ def init_db():
         print(e)
 
 
+# hard-coded, they almost never change
 CUISINE_TYPES = ['traditional', 'italian', 'mexican', 'chinese', 'pizzeria']
 WEEK_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
@@ -69,18 +69,36 @@ class Restaurant(db):
     working_days = relationship("WorkingDay", cascade="all,delete,delete-orphan", backref="restaurant")
     dishes = relationship("Dish", cascade="all,delete,delete-orphan", backref="restaurant")
 
-    @validates('owner_id')
-    def validate_owner_id(self, key, owner_id):
-        if (owner_id is None): raise ValueError("owner_id is None")
-        if (owner_id <= 0): raise ValueError("owner_id must be > 0")
-        return owner_id
-        
+    @validates('owner_id', 'capacity')
+    def validate_positive_integer(self, key, value):
+        return _validate_integer(key, value)
+
+    @validates('name','phone', 'prec_measures')
+    def validate_string(self, key, value):
+        return _validate_string(key, value)
+
+    @validates('lat', 'lon')
+    def validate_position(self, key, value):
+        return _validate_float(key, value, None)
+
     @validates('cuisine_type')
     def validate_cuisine_type(self, key, cuisine_types):
         if not isinstance(cuisine_types, list): raise ValueError("cuisine_type is not a list")
         if any(i not in CUISINE_TYPES for i in cuisine_types): raise ValueError("cuisine_type elements are not strings")
         if (len(cuisine_types) == 0): raise ValueError("cuisine_type is empty")
         return cuisine_types
+
+    @validates('avg_time_of_stay')
+    def validate_avg_time_of_stay(self, key, value):
+        return _validate_integer(key, value, 14)
+
+    @validates('tot_reviews', 'likes')
+    def validate_positive_integer_or_zero(self, key, value):
+        return _validate_integer(key, value, -1)
+
+    @validates('avg_rating')
+    def validate_avg_rating(self, key, value):
+        return _validate_float(key, value, 0, 5)
 
     def serialize(self):
         complex_fields = ['tables', 'working_days']
@@ -108,23 +126,13 @@ class Table(db):
     name = Column(Unicode(128), CheckConstraint('length(name) > 0'), nullable=False)   
     capacity = Column(Integer, CheckConstraint('capacity > 0'), nullable=False)
 
-    @validates('restaurant_id')
-    def validate_restaurant_id(self, key, restaurant_id):
-        if (restaurant_id is None): raise ValueError("restaurant_id is None")
-        if (restaurant_id <= 0): raise ValueError("restaurant_id must be > 0")
-        return restaurant_id
+    @validates('restaurant_id', 'capacity')
+    def validate_integer(self, key, value):
+        return _validate_integer(key, value)
 
     @validates('name')
-    def validate_name(self, key, name):
-        if (name is None): raise ValueError("name is None")
-        if (len(name) == 0): raise ValueError("name is empty")
-        return name
-
-    @validates('capacity')
-    def validate_capacity(self, key, capacity):
-        if (capacity is None): raise ValueError("capacity is None")
-        if (capacity <= 0): raise ValueError("capacity must be > 0")
-        return capacity
+    def validate_name(self, key, value):
+        return _validate_string(key, value)
 
     def serialize(self):
         return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
@@ -139,10 +147,8 @@ class WorkingDay(db):
     work_shifts = Column(PickleType, nullable=False)  
 
     @validates('restaurant_id')
-    def validate_restaurant_id(self, key, restaurant_id):
-        if (restaurant_id is None): raise ValueError("restaurant_id is None")
-        if (restaurant_id <= 0): raise ValueError("restaurant_id must be > 0")
-        return restaurant_id
+    def validate_restaurant_id(self, key, value):
+        return _validate_integer(key, value)
         
     @validates('day')
     def validate_day(self, key, day):
@@ -188,28 +194,16 @@ class Dish(db):
     ingredients = Column(Unicode(128), CheckConstraint('length(ingredients) > 0'), nullable=False)
 
     @validates('restaurant_id')
-    def validate_restaurant_id(self, key, restaurant_id):
-        if (restaurant_id is None): raise ValueError("restaurant_id is None")
-        if (restaurant_id <= 0): raise ValueError("restaurant_id must be > 0")
-        return restaurant_id
+    def validate_restaurant_id(self, key, value):
+        return _validate_integer(key, value)
 
-    @validates('name')
-    def validate_name(self, key, name):
-        if (name is None): raise ValueError("name is None")
-        if (len(name) == 0): raise ValueError("name is empty")
-        return name
+    @validates('name', 'ingredients')
+    def validate_string(self, key, value):
+        return _validate_string(key, value)
 
     @validates('price')
-    def validate_price(self, key, price):
-        if (price is None): raise ValueError("price is None")
-        if (price <= 0): raise ValueError("price must be > 0")
-        return price
-
-    @validates('ingredients')
-    def validate_ingredients(self, key, ingredients):
-        if (ingredients is None): raise ValueError("ingredients is None")
-        if (len(ingredients) == 0): raise ValueError("ingredients is empty")
-        return ingredients
+    def validate_price(self, key, value):
+        return _validate_float(key, value, 0.001)
 
     def serialize(self):
         return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
@@ -267,16 +261,8 @@ class RestaurantDeleted(db):
     def validate_name(self, key, value):
         return _validate_string(key, value)
     
-    @validates('likes_deleted')
-    def validate_likes_deleted(self, key, value):
-        return _validate_boolean(key, value)
-
-    @validates('reviews_deleted')
-    def validate_reviews_deleted(self, key, value):
-        return _validate_boolean(key, value)
-
-    @validates('reservations_service_notified')
-    def validate_reservations_service_notified(self, key, value):
+    @validates('likes_deleted', 'reviews_deleted', 'reservations_service_notified')
+    def validate_boolean(self, key, value):
         return _validate_boolean(key, value)
 
     def serialize(self):
@@ -295,10 +281,13 @@ def _validate_integer(key, value, greater_than=0):
     if value <= greater_than: raise ValueError(str(key) + " must be greater than " + str(greater_than))
     return value
 
-def _validate_float(key, value, greater_than=0):
+def _validate_float(key, value, min_value=0, max_value=None):
     if value is None: raise ValueError(str(key) + " is None")
     if not isinstance(value, float): raise ValueError(str(key) + " is not a float")
-    if value <= greater_than: raise ValueError(str(key) + " must be greater than " + str(greater_than))
+    if min_value is not None and value < min_value: 
+        raise ValueError(str(key) + " must be greater or equal than " + str(min_value))
+    if max_value is not None and value > max_value: 
+        raise ValueError(str(key) + " must be less or equal than " + str(max_value))
     return value
 
 def _validate_string(key, value, greater_than=0):
