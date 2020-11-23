@@ -13,7 +13,9 @@ def create_restaurant():
     tot_capacity = 0
     tables = request_dict.pop('tables')
     for table in tables:
-        new_table = Table(**table)
+        new_table = Table()
+        new_table.name = table['name'] 
+        new_table.capacity = table['capacity']
         tot_capacity += new_table.capacity
         new_tables.append(new_table)
 
@@ -25,6 +27,8 @@ def create_restaurant():
             return connexion.problem(400, "Bad Request", "There are two working days with the same day of the week")
         try:
             new_wd = WorkingDay(**wd)
+            new_wd.day = wd['day'] 
+            new_wd.work_shifts = wd['work_shifts']
             new_wds.append(new_wd)
         except ValueError as e:
             return connexion.problem(400, "Bad Request", str(e))
@@ -34,10 +38,15 @@ def create_restaurant():
     new_dishes = []
     dishes = request_dict.pop('dishes')
     for dish in dishes:
-        new_dish = Dish(**dish)
+        new_dish = Dish()
+        new_dish.name = dish['name'] 
+        new_dish.price = dish['price'] 
+        new_dish.ingredients = dish['ingredients'] 
         new_dishes.append(new_dish)
 
     # restaurant
+    expected_keys = ['owner_id', 'name', 'lat', 'lon', 'phone', 'prec_measures', 'cuisine_type', 'avg_time_of_stay']
+    request_dict = dict((k, request_dict[k]) for k in request_dict.keys() if k in expected_keys)
     new_restaurant = Restaurant(**request_dict)
     new_restaurant.capacity = tot_capacity
     new_restaurant.tables = new_tables
@@ -53,24 +62,24 @@ def create_restaurant():
 def get_restaurants():
     owner_id = request.args['owner_id'] if 'owner_id' in request.args else None
     name = request.args['name'] if 'name' in request.args else None
-    lat = request.args['lat'] if 'lat' in request.args else None
-    lon = request.args['lon'] if 'lon' in request.args else None
+    lat = float(request.args['lat']) if 'lat' in request.args else None
+    lon = float(request.args['lon']) if 'lon' in request.args else None
 
     q = db_session.query(Restaurant)
     
     if owner_id is not None:
-        q.filter(Restaurant.owner_id == owner_id)
+        q = q.filter(Restaurant.owner_id == owner_id)
     
     if name is not None:
-        q.filter(Restaurant.name.contains(name))
+        q = q.filter(Restaurant.name.contains(name))
 
     if (lat is not None and lon is None) or (lat is None and lon is not None):
         return connexion.problem(400, "Bad Request", "'lat' and 'lon' must be provided together")
     if lat is not None and lon is not None:
-        q.filter(
+        q = q.filter(
             and_(
-                and_(Restaurant.lat >= Restaurant.lat - 0.02, Restaurant.lat <= Restaurant.lat + 0.02),
-                and_(Restaurant.lon >= Restaurant.lon - 0.02, Restaurant.lon <= Restaurant.lon + 0.02)    
+                and_(Restaurant.lat >= lat - 0.02, Restaurant.lat <= lat + 0.02),
+                and_(Restaurant.lon >= lon - 0.02, Restaurant.lon <= lon + 0.02)    
             )
         )
 
@@ -122,7 +131,10 @@ def edit_restaurant(restaurant_id):
     if dishes is not None:
         new_dishes = []
         for dish in dishes:
-            new_dish = Dish(**dish)
+            new_dish = Dish()
+            new_dish.name = dish['name'] 
+            new_dish.price = dish['price'] 
+            new_dish.ingredients = dish['ingredients'] 
             new_dishes.append(new_dish)
         restaurant.dishes = new_dishes
 
@@ -130,7 +142,8 @@ def edit_restaurant(restaurant_id):
     if new_phone is not None:
         restaurant.phone = new_phone
 
-    db_session.commit()
+    if new_phone is not None or dishes is not None:
+        db_session.commit()
 
     return 'Restaurant successfully edited'
 
@@ -157,19 +170,3 @@ def delete_restaurant(restaurant_id):
     db_session.commit()
 
     return 'Restaurant successfully deleted'
-
-
-def get_restaurant_tables(restaurant_id):
-    q = db_session.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
-    if q is not None:
-        return q.serialize()['tables']
-    else:
-        return connexion.problem(404, "Not found", "There is no restaurant with the specified id")
-
-
-def get_restaurant_working_days(restaurant_id):
-    q = db_session.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
-    if q is not None:
-        return q.serialize()['working_days']
-    else:
-        return connexion.problem(404, "Not found", "There is no restaurant with the specified id")

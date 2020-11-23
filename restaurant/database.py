@@ -4,6 +4,7 @@ from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker, backref, relationship, validates
 from sqlalchemy.ext.declarative import declarative_base
 from enum import Enum
+from static.enum import CUISINE_TYPES, WEEK_DAYS
 import time
 import inspect
 
@@ -33,11 +34,6 @@ def init_db():
         '''
     except Exception as e:
         print(e)
-
-
-# hard-coded, they almost never change
-CUISINE_TYPES = ['traditional', 'italian', 'mexican', 'chinese', 'pizzeria']
-WEEK_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
 
 
 class Restaurant(db):
