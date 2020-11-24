@@ -35,26 +35,3 @@ def task_celery():
         if response.status_code == 200:
             restaurants_deleted.reservations_service_notified = True
 '''
-
-
-'''
-reservations/
-reservations/{reservation_id}
-
-reservation/restaurants/{restaurant_id}
-
-
-restaurants/ 
-    query: 
-        - Nome
-        - Cucine
-        - Lat/Lon
-        - working day
-
-reservations/
-    query: 
-        - restaurants_id
-        - user_id
-        - startdate
-        - enddate
-'''

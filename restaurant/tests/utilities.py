@@ -107,5 +107,25 @@ def get_reviews_by_API(test_client, user_id=None, restaurant_id=None):
             url += '?restaurant_id=' + str(restaurant_id)
         else: 
             url += '&restaurant_id=' + str(restaurant_id)
-        queries += 1
     return test_client.get(url, follow_redirects=True)
+
+
+mocked_reservations = [
+  {
+    "booker_id": 1,
+    "cancelled": None,
+    "date": "2020-11-21 12:00:00",
+    "id": 1,
+    "places": 2,
+    "restaurant_id": 1,
+    "seats": [
+      {
+        "confirmed": False,
+        "guests_email": "test@test.com",
+        "id": 1,
+        "reservation_id": 1
+      }
+    ],
+    "table_id": 1
+  }
+]

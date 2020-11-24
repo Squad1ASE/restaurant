@@ -1,21 +1,23 @@
 from tests.conftest import test_app
 from database import db_session, Restaurant, Review
 from sqlalchemy import exc
-from tests.utilities import get_reviews_by_API
+from tests.utilities import get_reviews_by_API, mocked_reservations
 import datetime
+from unittest import mock
+from unittest.mock import patch
+import requests
 
 
-def _check_reviews(review_obj, dict_review):
-    review = review_obj.serialize()
+def _check_reviews(review, dict_review):
+    if not isinstance(review, dict): 
+        review = review.serialize()
     for key in dict_review.keys():
         if key == 'date':
             assert review['date'] == dict_review['date'].strftime("%d/%m/%Y")
         elif key == 'marked':
-            assert review_obj.marked == dict_review['marked']
+            continue
         else:
             assert review[key] == dict_review[key]
-    if 'marked' not in dict_review:
-        assert review_obj.marked == False
 
 
 def test_insertDB_review(test_app):
@@ -34,6 +36,7 @@ def test_insertDB_review(test_app):
     assert restaurant is not None
 
     now = datetime.datetime.now()
+
     # incorrect reviews pt1 - fail check validators
     incorrect_reviews = [
         dict(
@@ -265,8 +268,15 @@ def test_insertDB_review(test_app):
     assert len(reviews) == len(correct_reviews)
 
 
-def test_create_review(test_app):
+@patch('views.review.requests.get')
+def test_create_review(mock1, test_app):
     app, test_client = test_app
+
+    # mocked reservations with at least one element
+    ok_mock = mock.MagicMock()
+    type(ok_mock).status_code = mock.PropertyMock(return_value=200)
+    ok_mock.json.return_value = mocked_reservations
+    mock1.return_value = ok_mock
 
     # incorrect create review - restaurant_id not exists
     correct_body = dict(user_id=1, restaurant_id=1, comment='good!', rating=3)
@@ -337,16 +347,53 @@ def test_create_review(test_app):
     # attempt to put review with the same user
     assert test_client.put('/reviews', json=correct_body, follow_redirects=True).status_code == 403
 
+    # empty mocked reservations - attempt to review without making a reservation first
+    ok_mock.json.return_value = []
+    mock1.return_value = ok_mock
+    correct_body = dict(user_id=5, restaurant_id=restaurant.id, comment='good!', rating=3)
+    assert test_client.put('/reviews', json=correct_body, follow_redirects=True).status_code == 403
 
-    #TODO: SIMULARE MOCK
+    # Reservations service responds with error - pt1
+    not_ok_mock = mock.MagicMock()
+    type(not_ok_mock).status_code = mock.PropertyMock(return_value=404)
+    not_ok_mock.json.return_value = mocked_reservations
+    mock1.return_value = not_ok_mock
+    correct_body = dict(user_id=5, restaurant_id=restaurant.id, comment='good!', rating=3)
+    assert test_client.put('/reviews', json=correct_body, follow_redirects=True).status_code == 500
 
+    # Reservations service responds with error - pt2
+    not_ok_mock = mock.MagicMock()
+    type(not_ok_mock).status_code = mock.PropertyMock(return_value=500)
+    not_ok_mock.json.return_value = mocked_reservations
+    mock1.return_value = not_ok_mock
+    correct_body = dict(user_id=5, restaurant_id=restaurant.id, comment='good!', rating=3)
+    assert test_client.put('/reviews', json=correct_body, follow_redirects=True).status_code == 500
 
     # check total reviews
     reviews = db_session.query(Review).all()
     assert len(reviews) == 2
 
 
-def aaa_test_get_reviews(test_app):
+def test_create_review_timeout_eceptions(test_app):
+    app, test_client = test_app
+
+    # create a restaurant to test reviews
+    correct_restaurants = dict(
+        owner_id = 1, name = 'Trial', lat = 22, lon = 22, phone = '3346734121', 
+        cuisine_type = ['traditional'], capacity = 10, prec_measures = 'leggeX',avg_time_of_stay = 30
+    )
+    restaurant = Restaurant(**correct_restaurants)
+    db_session.add(restaurant)
+    db_session.commit()
+    restaurant = db_session.query(Restaurant).first()
+    assert restaurant is not None
+
+    # Reservations service raise exception
+    correct_body = dict(user_id=5, restaurant_id=restaurant.id, comment='good!', rating=3)
+    assert test_client.put('/reviews', json=correct_body, follow_redirects=True).status_code == 500
+
+
+def test_get_reviews(test_app):
     app, test_client = test_app
     
     # empty get 
@@ -354,20 +401,55 @@ def aaa_test_get_reviews(test_app):
     assert response.status_code == 200
     assert response.json == []
     
-    # create some restaurants
-    correct_restaurants = restaurant_examples
-    for idx, r in enumerate(correct_restaurants):
-        assert create_restaurant_by_API(test_client, r).status_code == 200
-    
+    # create two restaurant to test reviews
+    correct_restaurants = dict(
+        owner_id = 123, name = 'Trial', lat = 22, lon = 22, phone = '3346734121', 
+        cuisine_type = ['traditional'], capacity = 10, prec_measures = 'leggeX',avg_time_of_stay = 30
+    )
+    restaurant = Restaurant(**correct_restaurants)
+    db_session.add(restaurant)
+    correct_restaurants = dict(
+        owner_id = 122, name = 'Trial - 2', lat = 22, lon = 22, phone = '3346734121', 
+        cuisine_type = ['traditional'], capacity = 10, prec_measures = 'leggeX',avg_time_of_stay = 30
+    )
+    restaurant = Restaurant(**correct_restaurants)
+    db_session.add(restaurant)
+
+    db_session.commit()
+    restaurant = db_session.query(Restaurant).all()
+    assert len(restaurant) == 2
+
+    # correct reviews
+    now = datetime.datetime.now()
+    original_correct_reviews = [
+        dict(
+            user_id=1, restaurant_id=1, rating=3,
+            comment='good!', date=now, marked=False
+        ),
+        dict(
+            user_id=2, restaurant_id=1, rating=1,
+            comment='g', date=now
+        ),
+        dict(
+            user_id=1, restaurant_id=2, rating=5,
+            comment='mhhh!', date=now, marked=False
+        )
+    ]
+    for idx, r in enumerate(original_correct_reviews):
+        review = Review(**r)
+        db_session.add(review)
+    db_session.commit()
+
     # correct get 
+    correct_reviews = original_correct_reviews
     response = get_reviews_by_API(test_client)
     assert response.status_code == 200
-    restaurants = response.json
-    assert len(correct_restaurants) == len(restaurants)
-    correct_restaurants = sorted(correct_restaurants, key=lambda k: k['name']) 
-    restaurants = sorted(restaurants, key=lambda k: k['name']) 
-    for idx, r in enumerate(correct_restaurants):
-        _check_restaurants(restaurants[idx], r)
+    reviews = response.json
+    assert len(correct_reviews) == len(reviews)
+    correct_reviews = sorted(correct_reviews, key=lambda k: k['comment']) 
+    reviews = sorted(reviews, key=lambda k: k['comment']) 
+    for idx, r in enumerate(correct_reviews):
+        _check_reviews(reviews[idx], r)
 
     # bad query parameters
     assert get_reviews_by_API(test_client, 0).status_code == 400
@@ -375,73 +457,41 @@ def aaa_test_get_reviews(test_app):
     assert get_reviews_by_API(test_client, 'a').status_code == 400
     assert get_reviews_by_API(test_client, []).status_code == 400
     assert get_reviews_by_API(test_client, ['a']).status_code == 400
-    assert get_reviews_by_API(test_client, None, None, 1).status_code == 400
-    assert get_reviews_by_API(test_client, None, None, 'a').status_code == 400
-    assert get_reviews_by_API(test_client, None, None, []).status_code == 400
-    assert get_reviews_by_API(test_client, None, None, ['a']).status_code == 400
-    assert get_reviews_by_API(test_client, None, None, None, 1).status_code == 400
-    assert get_reviews_by_API(test_client, None, None, None, 'a').status_code == 400
-    assert get_reviews_by_API(test_client, None, None, None, []).status_code == 400
-    assert get_reviews_by_API(test_client, None, None, None, ['a']).status_code == 400
-    assert get_reviews_by_API(test_client, None, None, 1, 'a').status_code == 400
-    assert get_reviews_by_API(test_client, None, None, 'a', 1).status_code == 400
+    assert get_reviews_by_API(test_client, None, 0).status_code == 400
+    assert get_reviews_by_API(test_client, None, -1).status_code == 400
+    assert get_reviews_by_API(test_client, None, 'a').status_code == 400
+    assert get_reviews_by_API(test_client, None, []).status_code == 400
+    assert get_reviews_by_API(test_client, None, ['a']).status_code == 400
     
-    # correct query parameters - owner id
-    correct_restaurants = restaurant_examples
-    owner_id = correct_restaurants[0]['owner_id']
-    response = get_reviews_by_API(test_client, owner_id)
+    # correct query parameters - user id
+    correct_reviews = original_correct_reviews
+    user_id = correct_reviews[0]['user_id']
+    response = get_reviews_by_API(test_client, user_id)
     assert response.status_code == 200
-    restaurants = response.json
-    correct_restaurants = [p for p in correct_restaurants if p['owner_id'] == owner_id]
-    assert len(correct_restaurants) == len(restaurants)
-    correct_restaurants = sorted(correct_restaurants, key=lambda k: k['name']) 
-    restaurants = sorted(restaurants, key=lambda k: k['name']) 
-    for idx, r in enumerate(correct_restaurants):
-        _check_restaurants(restaurants[idx], r)
+    reviews = response.json
+    correct_reviews = [p for p in correct_reviews if p['user_id'] == user_id]
+    assert len(correct_reviews) == len(reviews)
+    correct_reviews = sorted(correct_reviews, key=lambda k: k['comment']) 
+    reviews = sorted(reviews, key=lambda k: k['comment']) 
+    for idx, r in enumerate(correct_reviews):
+        _check_reviews(reviews[idx], r)
 
-    # correct query parameters - name
-    correct_restaurants = restaurant_examples
-    response = get_reviews_by_API(test_client, None, '-')
+    # correct query parameters - restaurant id
+    correct_reviews = original_correct_reviews
+    restaurant_id = correct_reviews[0]['restaurant_id']
+    response = get_reviews_by_API(test_client, None, restaurant_id)
     assert response.status_code == 200
-    restaurants = response.json
-    correct_restaurants = [p for p in correct_restaurants if '-' in p['name']]
-    assert len(correct_restaurants) == len(restaurants)
-    correct_restaurants = sorted(correct_restaurants, key=lambda k: k['name']) 
-    restaurants = sorted(restaurants, key=lambda k: k['name']) 
-    for idx, r in enumerate(correct_restaurants):
-        _check_restaurants(restaurants[idx], r)
-
-    # correct query parameters - lat and lon
-    # the first two restaurants in restaurant_examples should be relatively close
-    correct_restaurants = [restaurant_examples[0], restaurant_examples[1]]
-    response = get_reviews_by_API(test_client, None, None, restaurant_examples[0]['lat'], restaurant_examples[0]['lon'])
-    assert response.status_code == 200
-    restaurants = response.json
-    assert len(correct_restaurants) == len(restaurants)
-    correct_restaurants = sorted(correct_restaurants, key=lambda k: k['name']) 
-    restaurants = sorted(restaurants, key=lambda k: k['name']) 
-    for idx, r in enumerate(correct_restaurants):
-        _check_restaurants(restaurants[idx], r)
-
-    # correct query parameters - cuisine type
-    correct_restaurants = restaurant_examples
-    response = get_reviews_by_API(test_client, None, None, None, None, ['italian', 'pizzeria'])
-    assert response.status_code == 200
-    restaurants = response.json
-    correct_restaurants = [p for p in correct_restaurants if any(i in p['cuisine_type'] for i in ['italian', 'pizzeria'])]
-    assert len(correct_restaurants) == len(restaurants)
-    correct_restaurants = sorted(correct_restaurants, key=lambda k: k['name']) 
-    restaurants = sorted(restaurants, key=lambda k: k['name']) 
-    for idx, r in enumerate(correct_restaurants):
-        _check_restaurants(restaurants[idx], r)
-
+    reviews = response.json
+    correct_reviews = [p for p in correct_reviews if p['restaurant_id'] == restaurant_id]
+    assert len(correct_reviews) == len(reviews)
+    correct_reviews = sorted(correct_reviews, key=lambda k: k['comment']) 
+    reviews = sorted(reviews, key=lambda k: k['comment']) 
+    for idx, r in enumerate(correct_reviews):
+        _check_reviews(reviews[idx], r)
 
     # correct query parameters - all filters
-    response = get_reviews_by_API(
-        test_client, restaurant_examples[0]['owner_id'], restaurant_examples[0]['name'], 
-        restaurant_examples[0]['lat'], restaurant_examples[0]['lon'], ['italian', 'pizzeria']
-    )
+    response = get_reviews_by_API(test_client, original_correct_reviews[0]['user_id'], original_correct_reviews[0]['restaurant_id'])
     assert response.status_code == 200
-    restaurants = response.json
-    assert len(restaurants) == 1
-    _check_restaurants(restaurants[0], restaurant_examples[0])
+    reviews = response.json
+    assert len(reviews) == 1
+    _check_reviews(reviews[0], original_correct_reviews[0])
