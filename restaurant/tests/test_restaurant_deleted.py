@@ -5,14 +5,10 @@ from sqlalchemy import exc
 
 def _check_restaurants_deleted(restaurant_deleted, dict_restaurant_deleted):
     assert restaurant_deleted.id == dict_restaurant_deleted['id']
-    if 'likes_deleted' in dict_restaurant_deleted:
-        assert restaurant_deleted.likes_deleted == dict_restaurant_deleted['likes_deleted']
+    if 'likes_and_reviews_deleted' in dict_restaurant_deleted:
+        assert restaurant_deleted.likes_and_reviews_deleted == dict_restaurant_deleted['likes_and_reviews_deleted']
     else:
-        assert restaurant_deleted.likes_deleted == False
-    if 'reviews_deleted' in dict_restaurant_deleted: 
-        assert restaurant_deleted.reviews_deleted == dict_restaurant_deleted['reviews_deleted'] 
-    else:
-        assert restaurant_deleted.reviews_deleted == False
+        assert restaurant_deleted.likes_and_reviews_deleted == False
     if 'reservations_service_notified' in dict_restaurant_deleted:
         assert restaurant_deleted.reservations_service_notified == dict_restaurant_deleted['reservations_service_notified'] 
     else:
@@ -32,10 +28,8 @@ def test_insertDB_restaurant_deleted(test_app):
         dict(id=1, name=''),
         dict(id=1, name=[]),
         dict(id=1, name=0),
-        dict(id=2, name='trial', likes_deleted=1),
-        dict(id=2, name='trial', likes_deleted='a'),
-        dict(id=2, name='trial', reviews_deleted=1),
-        dict(id=2, name='trial', reviews_deleted='a'),
+        dict(id=2, name='trial', likes_and_reviews_deleted=1),
+        dict(id=2, name='trial', likes_and_reviews_deleted='a'),
         dict(id=2, name='trial', reservations_service_notified=1),
         dict(id=2, name='trial', reservations_service_notified='a'),
     ]
@@ -67,8 +61,8 @@ def test_insertDB_restaurant_deleted(test_app):
     # correct restaurants_deleted
     correct_restaurants_deleted = [
         dict(id=1, name='trial'),
-        dict(id=2, name='trial', likes_deleted=False, reviews_deleted=False, reservations_service_notified=False),
-        dict(id=3, name='trial', likes_deleted=True, reviews_deleted=True, reservations_service_notified=True),
+        dict(id=2, name='trial', likes_and_reviews_deleted=False, reservations_service_notified=False),
+        dict(id=3, name='trial', likes_and_reviews_deleted=True, reservations_service_notified=True),
     ]
     for idx, r in enumerate(correct_restaurants_deleted):
         restaurant_deleted = RestaurantDeleted(**r)

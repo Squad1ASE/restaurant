@@ -329,7 +329,6 @@ def test_create_review(mock1, test_app):
     for r in incorrect_bodies:
         assert test_client.put('/reviews', json=r, follow_redirects=True).status_code == 400
 
-
     # correct create review pt1
     correct_body = dict(user_id=1, restaurant_id=restaurant.id, comment='good!', rating=3)
     assert test_client.put('/reviews', json=correct_body, follow_redirects=True).status_code == 200

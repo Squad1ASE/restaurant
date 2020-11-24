@@ -9,12 +9,12 @@ import requests
 
 #TODO prendere da variabili d'ambiente
 REQUEST_TIMEOUT_SECONDS = 1
-RESERVATIONS_SERVICE = 'http://0.0.0.0:5010/reservation'
+RESERVATIONS_SERVICE = 'http://0.0.0.0:5010'
 
 
 def _compose_url_get_reservations(user_id, restaurant_id, end):
     end_date = end.isoformat()
-    url = RESERVATIONS_SERVICE
+    url = RESERVATIONS_SERVICE + '/reservations'
     url += '?user_id=' + str(user_id) + '&restaurant_id=' + str(restaurant_id) + '&end=' + str(end_date)
     return url
 

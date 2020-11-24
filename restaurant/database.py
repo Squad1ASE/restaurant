@@ -19,19 +19,6 @@ db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind
 def init_db():
     try:
         db.metadata.create_all(bind=engine)
-        q = db_session.query(Restaurant).filter(Restaurant.id == 1)
-        restaurant = q.first()
-        '''
-        if restaurant is None:
-            example = Restaurant()
-            example.name = 'Trial Restaurant'
-            example.likes = 42
-            example.phone = 555123456
-            example.lat = 43.720586
-            example.lon = 10.408347
-            db_session.add(example)
-            db_session.commit()
-        '''
     except Exception as e:
         print(e)
 
@@ -286,8 +273,7 @@ class RestaurantDeleted(db):
 
     name = Column(Unicode(128), CheckConstraint('length(name) > 0'), nullable=False)
 
-    likes_deleted = Column(Boolean, default=False)
-    reviews_deleted = Column(Boolean, default=False)
+    likes_and_reviews_deleted = Column(Boolean, default=False)
     reservations_service_notified = Column(Boolean, default=False)
         
     @validates('id')
@@ -298,7 +284,7 @@ class RestaurantDeleted(db):
     def validate_name(self, key, value):
         return _validate_string(key, value)
     
-    @validates('likes_deleted', 'reviews_deleted', 'reservations_service_notified')
+    @validates('likes_and_reviews_deleted', 'reservations_service_notified')
     def validate_boolean(self, key, value):
         return _validate_boolean(key, value)
 
