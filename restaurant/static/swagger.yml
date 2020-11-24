@@ -322,6 +322,158 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /likes:       
+    put:
+      tags:
+      - Likes
+      summary: Put a new like 
+      operationId: views.like.create_like
+      requestBody:
+        description: Like to put
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+              - user_id
+              - restaurant_id
+              type: object
+              properties:
+                user_id:
+                  minimum: 1
+                  type: integer
+                  description: Unique identifier of user
+                  example: 123
+                restaurant_id:
+                  minimum: 1
+                  type: integer
+                  description: Unique identifier of restaurant
+                  example: 5
+      responses:
+        200:
+          description: Like successfully put
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Like successfully put
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Request body is not valid JSON"
+                status: 400
+                title: "Bad Request"
+                type: "about:blank"
+        403:
+          description: A user cannot like the same restaurant multiple times
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "A user cannot like the same restaurant multiple times"
+                status: 403
+                title: "Forbidden"
+                type: "about:blank"
+        404:
+          description: Restaurant does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "There is no restaurant with the specified id"
+                status: 404
+                title: "Not found"
+                type: "about:blank"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reviews:       
+    get:
+      tags:
+      - Reviews
+      summary: Get all reviews
+      operationId: views.review.get_reviews
+      parameters:
+      - name: user_id
+        in: query
+        schema:
+          $ref: '#/components/schemas/Review/properties/user_id'
+      - name: restaurant_id
+        in: query
+        schema:
+          $ref: '#/components/schemas/Review/properties/restaurant_id'
+      responses:
+        200:
+          description: Return all reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    put:
+      tags:
+      - Reviews
+      summary: Make a review
+      operationId: views.review.create_review
+      requestBody:
+        description: Review to make
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reviews:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Review'
+      responses:
+        200:
+          description: Review successfully made
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Review successfully made
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Request body is not valid JSON"
+                status: 400
+                title: "Bad Request"
+                type: "about:blank"
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                   
 components:
   schemas:
     Restaurant:
@@ -547,6 +699,43 @@ components:
           type: string
           description: Dish ingredients
           example: "tomato, mozzarella"
+    Review:
+      required:
+      - user_id
+      - restaurant_id
+      - comment
+      - rating
+      - date
+      type: object
+      properties:
+        user_id:
+          minimum: 1
+          type: integer
+          description: Unique identifier of user
+          example: 123
+        restaurant_id:
+          minimum: 1
+          type: integer
+          description: Unique identifier of restaurant
+          example: 5
+        comment:
+          maxLength: 128
+          minLength: 1
+          type: string
+          description: Comment on restaurant
+          example: "excellent!"
+        rating:
+          minimum: 0
+          maximum: 5
+          type: number
+          description: Rating from 0 to 5
+          example: 3.5
+        date:
+          type: string
+          readOnly: true
+          pattern: '^\d{2}/\d{2}/\d{4}$'
+          description: Date of review
+          example: "17/12/2019"
     Error:
       required:
       - detail

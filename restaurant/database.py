@@ -209,19 +209,26 @@ class Dish(db):
         return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
 
 
-'''
 class Like(db):
     __tablename__ = 'like'
 
-    liker_id = Column(Integer, ForeignKey('user.id'), primary_key=True)
-    liker = relationship('User', foreign_keys='Like.liker_id')
+    user_id = Column(Integer, primary_key=True)
 
     restaurant_id = Column(Integer, ForeignKey('restaurant.id'), primary_key=True)
     restaurant = relationship('Restaurant', foreign_keys='Like.restaurant_id')
 
     marked = Column(Boolean, default=False) 
 
+    @validates('user_id','restaurant_id')
+    def validate_integer(self, key, value):
+        return _validate_integer(key, value)
 
+    @validates('marked')
+    def validate_marked(self, key, value):
+        return _validate_boolean(key, value)
+
+
+'''
 class Review(db):
     __tablename__ = 'review'
 
@@ -235,8 +242,6 @@ class Review(db):
     rating = Column(Integer)
     comment = Column(Unicode(128))
     date = Column(Date)
-
-
 '''
 
 # Table to track deleted databases.

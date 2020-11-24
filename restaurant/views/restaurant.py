@@ -26,7 +26,7 @@ def create_restaurant():
         if wd['day'] in days_already_present:
             return connexion.problem(400, "Bad Request", "There are two working days with the same day of the week")
         try:
-            new_wd = WorkingDay(**wd)
+            new_wd = WorkingDay()
             new_wd.day = wd['day'] 
             new_wd.work_shifts = wd['work_shifts']
             new_wds.append(new_wd)
