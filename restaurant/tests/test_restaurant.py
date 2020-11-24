@@ -2,8 +2,6 @@ from tests.conftest import test_app
 from database import db_session, Restaurant, Table, Dish, WorkingDay, RestaurantDeleted
 from sqlalchemy import exc
 from tests.utilities import *
-import datetime
-from datetime import timedelta
 
 
 def _check_restaurants(restaurant, dict_restaurant, to_serialize=False):
@@ -37,7 +35,6 @@ def _check_restaurants(restaurant, dict_restaurant, to_serialize=False):
         assert restaurant['likes'] == 0
 
 
-# --- UNIT TESTS ---
 def test_insertDB_restaurant(test_app):
     app, test_client = test_app
 
@@ -344,7 +341,6 @@ def test_insertDB_restaurant(test_app):
     assert len(restaurants) == tot_correct_restaurants
 
 
-# --- COMPONENT TESTS ---
 def test_create_restaurant(test_app):
     app, test_client = test_app
 
@@ -1228,8 +1224,24 @@ def test_get_restaurants(test_app):
     for idx, r in enumerate(correct_restaurants):
         _check_restaurants(restaurants[idx], r)
 
+    # correct query parameters - cuisine type
+    correct_restaurants = restaurant_examples
+    response = get_restaurants_by_API(test_client, None, None, None, None, ['italian', 'pizzeria'])
+    assert response.status_code == 200
+    restaurants = response.json
+    correct_restaurants = [p for p in correct_restaurants if any(i in p['cuisine_type'] for i in ['italian', 'pizzeria'])]
+    assert len(correct_restaurants) == len(restaurants)
+    correct_restaurants = sorted(correct_restaurants, key=lambda k: k['name']) 
+    restaurants = sorted(restaurants, key=lambda k: k['name']) 
+    for idx, r in enumerate(correct_restaurants):
+        _check_restaurants(restaurants[idx], r)
+
+
     # correct query parameters - all filters
-    response = get_restaurants_by_API(test_client, restaurant_examples[0]['owner_id'], restaurant_examples[0]['name'], restaurant_examples[0]['lat'], restaurant_examples[0]['lon'])
+    response = get_restaurants_by_API(
+        test_client, restaurant_examples[0]['owner_id'], restaurant_examples[0]['name'], 
+        restaurant_examples[0]['lat'], restaurant_examples[0]['lon'], ['italian', 'pizzeria']
+    )
     assert response.status_code == 200
     restaurants = response.json
     assert len(restaurants) == 1

@@ -50,7 +50,7 @@ def create_restaurant_by_API(test_client, data_dict=restaurant_examples[0]):
     return test_client.put('/restaurants', json=data_dict, follow_redirects=True)
 
 
-def get_restaurants_by_API(test_client, owner_id=None, name=None, lat=None, lon=None):
+def get_restaurants_by_API(test_client, owner_id=None, name=None, lat=None, lon=None, cuisine_types=[]):
     url = '/restaurants'
     queries = 0 
     if owner_id is not None:
@@ -74,6 +74,12 @@ def get_restaurants_by_API(test_client, owner_id=None, name=None, lat=None, lon=
         else: 
             url += '&lon=' + str(lon)
         queries += 1
+    for cuisine in cuisine_types:
+        if queries == 0:
+            url += '?cuisine_type=' + str(cuisine)
+        else: 
+            url += '&cuisine_type=' + str(cuisine)
+        queries += 1
     return test_client.get(url, follow_redirects=True)
 
 
@@ -87,3 +93,19 @@ def edit_restaurant_by_API(test_client, restaurant_id, data_dict):
 
 def delete_restaurant_by_API(test_client, restaurant_id, owner_id):
     return test_client.delete('/restaurants/'+str(restaurant_id), json=dict(owner_id=owner_id), follow_redirects=True)
+
+
+# --- UTILITIES REVIEWS ---
+def get_reviews_by_API(test_client, user_id=None, restaurant_id=None):
+    url = '/reviews'
+    queries = 0 
+    if user_id is not None:
+        url += '?user_id=' + str(user_id)
+        queries += 1
+    if restaurant_id is not None:
+        if queries == 0:
+            url += '?restaurant_id=' + str(restaurant_id)
+        else: 
+            url += '&restaurant_id=' + str(restaurant_id)
+        queries += 1
+    return test_client.get(url, follow_redirects=True)

@@ -1,114 +1,53 @@
 import connexion
-from database import db_session, Restaurant, Table, WorkingDay, Dish, RestaurantDeleted
+from database import db_session, Restaurant, Review
 from flask import request
 from sqlalchemy import or_, and_
 import json
+import datetime
 
 
 def create_review():
     request_dict = request.json
+    
+    user_id = request_dict.pop('user_id')
+    restaurant_id = request_dict.pop('restaurant_id')
 
-    # tables
-    new_tables = []
-    tot_capacity = 0
-    tables = request_dict.pop('tables')
-    for table in tables:
-        new_table = Table()
-        new_table.name = table['name'] 
-        new_table.capacity = table['capacity']
-        tot_capacity += new_table.capacity
-        new_tables.append(new_table)
+    q = db_session.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    if q is None:
+        return connexion.problem(404, "Not found", "There is no restaurant with the specified id")
 
-    # working days
-    new_wds, days_already_present = [], []
-    working_days = request_dict.pop('working_days')
-    for wd in working_days:
-        if wd['day'] in days_already_present:
-            return connexion.problem(400, "Bad Request", "There are two working days with the same day of the week")
-        try:
-            new_wd = WorkingDay(**wd)
-            new_wd.day = wd['day'] 
-            new_wd.work_shifts = wd['work_shifts']
-            new_wds.append(new_wd)
-        except ValueError as e:
-            return connexion.problem(400, "Bad Request", str(e))
-        days_already_present.append(wd['day'])
 
-    # dishes
-    new_dishes = []
-    dishes = request_dict.pop('dishes')
-    for dish in dishes:
-        new_dish = Dish()
-        new_dish.name = dish['name'] 
-        new_dish.price = dish['price'] 
-        new_dish.ingredients = dish['ingredients'] 
-        new_dishes.append(new_dish)
+    #TODO:chiamata a reservations
 
-    # restaurant
-    expected_keys = ['owner_id', 'name', 'lat', 'lon', 'phone', 'prec_measures', 'cuisine_type', 'avg_time_of_stay']
-    request_dict = dict((k, request_dict[k]) for k in request_dict.keys() if k in expected_keys)
-    new_restaurant = Restaurant(**request_dict)
-    new_restaurant.capacity = tot_capacity
-    new_restaurant.tables = new_tables
-    new_restaurant.working_days = new_wds
-    new_restaurant.dishes = new_dishes
 
-    db_session.add(new_restaurant)
-    db_session.commit()
+    new_review = Review()
+    new_review.user_id = user_id
+    new_review.restaurant_id = restaurant_id
+    new_review.comment = request_dict.pop('comment')
+    new_review.rating = request_dict.pop('rating')
+    new_review.date = datetime.datetime.now()
+    try:
+        db_session.add(new_review)
+        db_session.commit()
+    except Exception as e:
+        db_session.rollback()
+        return connexion.problem(403, "Forbidden", "A user cannot review the same restaurant multiple times")
 
-    return 'Restaurant successfully created'
+    return 'Review successfully made'
 
 
 def get_reviews():
-    request_dict = request.json
+    user_id = request.args['user_id'] if 'user_id' in request.args else None
+    restaurant_id = request.args['restaurant_id'] if 'restaurant_id' in request.args else None
 
-    # tables
-    new_tables = []
-    tot_capacity = 0
-    tables = request_dict.pop('tables')
-    for table in tables:
-        new_table = Table()
-        new_table.name = table['name'] 
-        new_table.capacity = table['capacity']
-        tot_capacity += new_table.capacity
-        new_tables.append(new_table)
+    q = db_session.query(Review)
+    
+    if user_id is not None:
+        q = q.filter(Review.user_id == user_id)
+    
+    if restaurant_id is not None:
+        q = q.filter(Review.restaurant_id == restaurant_id)
 
-    # working days
-    new_wds, days_already_present = [], []
-    working_days = request_dict.pop('working_days')
-    for wd in working_days:
-        if wd['day'] in days_already_present:
-            return connexion.problem(400, "Bad Request", "There are two working days with the same day of the week")
-        try:
-            new_wd = WorkingDay(**wd)
-            new_wd.day = wd['day'] 
-            new_wd.work_shifts = wd['work_shifts']
-            new_wds.append(new_wd)
-        except ValueError as e:
-            return connexion.problem(400, "Bad Request", str(e))
-        days_already_present.append(wd['day'])
-
-    # dishes
-    new_dishes = []
-    dishes = request_dict.pop('dishes')
-    for dish in dishes:
-        new_dish = Dish()
-        new_dish.name = dish['name'] 
-        new_dish.price = dish['price'] 
-        new_dish.ingredients = dish['ingredients'] 
-        new_dishes.append(new_dish)
-
-    # restaurant
-    expected_keys = ['owner_id', 'name', 'lat', 'lon', 'phone', 'prec_measures', 'cuisine_type', 'avg_time_of_stay']
-    request_dict = dict((k, request_dict[k]) for k in request_dict.keys() if k in expected_keys)
-    new_restaurant = Restaurant(**request_dict)
-    new_restaurant.capacity = tot_capacity
-    new_restaurant.tables = new_tables
-    new_restaurant.working_days = new_wds
-    new_restaurant.dishes = new_dishes
-
-    db_session.add(new_restaurant)
-    db_session.commit()
-
-    return 'Restaurant successfully created'
+    reviews = q.all()
+    return [p.serialize() for p in reviews]
 

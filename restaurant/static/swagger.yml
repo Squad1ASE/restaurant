@@ -29,6 +29,10 @@ paths:
         in: query
         schema:
           $ref: '#/components/schemas/Restaurant/properties/lon'
+      - name: cuisine_type
+        in: query
+        schema:
+          $ref: '#/components/schemas/Restaurant/properties/cuisine_type'
       responses:
         200:
           description: Return all restaurants
@@ -442,12 +446,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                reviews:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/Review'
+              $ref: '#/components/schemas/Review'
       responses:
         200:
           description: Review successfully made
@@ -725,11 +724,11 @@ components:
           description: Comment on restaurant
           example: "excellent!"
         rating:
-          minimum: 0
+          minimum: 1
           maximum: 5
-          type: number
-          description: Rating from 0 to 5
-          example: 3.5
+          type: integer
+          description: Rating from 1 to 5
+          example: 4
         date:
           type: string
           readOnly: true

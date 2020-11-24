@@ -9,7 +9,6 @@ def _check_working_days(working_day, dict_working_day):
         assert working_day[key] == dict_working_day[key]
 
 
-# --- UNIT TESTS ---
 def test_insertDB_working_day(test_app):
     app, test_client = test_app
 

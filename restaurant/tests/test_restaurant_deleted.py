@@ -20,7 +20,6 @@ def _check_restaurants_deleted(restaurant_deleted, dict_restaurant_deleted):
     assert restaurant_deleted.serialize() is not None
 
 
-# --- UNIT TESTS ---
 def test_insertDB_restaurant_deleted(test_app):
     app, test_client = test_app
     

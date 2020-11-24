@@ -3,9 +3,9 @@ from sqlalchemy import create_engine, Column, Integer, Float, Text, Unicode, For
 from sqlalchemy.schema import CheckConstraint
 from sqlalchemy.orm import scoped_session, sessionmaker, backref, relationship, validates
 from sqlalchemy.ext.declarative import declarative_base
-from enum import Enum
 from static.enum import CUISINE_TYPES, WEEK_DAYS
 import time
+import datetime
 import inspect
 
 
@@ -227,22 +227,54 @@ class Like(db):
     def validate_marked(self, key, value):
         return _validate_boolean(key, value)
 
+    def serialize(self):
+        return dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_'])
 
-'''
+
 class Review(db):
     __tablename__ = 'review'
 
-    reviewer_id = Column(Integer, ForeignKey('user.id'), primary_key=True)
-    reviewer = relationship('User', foreign_keys='Review.reviewer_id')
+    user_id = Column(Integer, primary_key=True)
 
     restaurant_id = Column(Integer, ForeignKey('restaurant.id'), primary_key=True)
     restaurant = relationship('Restaurant', foreign_keys='Review.restaurant_id')
 
-    marked = Column(Boolean, default=True)
-    rating = Column(Integer)
-    comment = Column(Unicode(128))
-    date = Column(Date)
-'''
+    marked = Column(Boolean, default=False)
+    rating = Column(Integer, CheckConstraint('rating >= 0 and rating <= 5'), nullable=False)
+    comment = Column(Unicode(128), CheckConstraint('length(comment) > 0'), nullable=False)
+    date = Column(Date, nullable=False)
+
+    @validates('user_id','restaurant_id')
+    def validate_integer(self, key, value):
+        return _validate_integer(key, value)
+
+    @validates('marked')
+    def validate_marked(self, key, value):
+        return _validate_boolean(key, value)
+
+    @validates('rating')
+    def validate_rating(self, key, value):
+        if value is None: raise ValueError(str(key) + " is None")
+        if not isinstance(value, int): raise ValueError(str(key) + " is not an int")
+        if value < 1 or value > 5: 
+            raise ValueError(str(key) + " must be must be between 1 and 5 (inclusive)")
+        return value
+
+    @validates('comment')
+    def validate_comment(self, key, value):
+        return _validate_string(key, value)
+
+    @validates('date')
+    def validate_date(self, key, value):
+        if value is None: raise ValueError(str(key) + " is None")
+        if not isinstance(value, datetime.datetime): raise ValueError(str(key) + " is not a datetime")
+        return value
+
+    def serialize(self):
+        serialized = dict([(k,v) for k,v in self.__dict__.items() if k[0] != '_' and k not in ['date','marked']])
+        serialized['date'] = self.date.strftime("%d/%m/%Y")
+        return serialized
+
 
 # Table to track deleted databases.
 # The information contained in it will allow the celery tasks to complete

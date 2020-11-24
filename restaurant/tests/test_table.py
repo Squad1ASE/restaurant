@@ -9,7 +9,6 @@ def _check_tables(table, dict_table):
         assert table[key] == dict_table[key]
 
 
- # --- UNIT TESTS ---
 def test_insertDB_table(test_app):
     app, test_client = test_app
    

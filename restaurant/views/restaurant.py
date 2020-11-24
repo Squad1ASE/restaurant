@@ -65,6 +65,9 @@ def get_restaurants():
     lat = float(request.args['lat']) if 'lat' in request.args else None
     lon = float(request.args['lon']) if 'lon' in request.args else None
 
+    body = dict(request.args.lists())
+    cuisine_types = body['cuisine_type'] if 'cuisine_type' in body else None
+
     q = db_session.query(Restaurant)
     
     if owner_id is not None:
@@ -83,8 +86,17 @@ def get_restaurants():
             )
         )
 
-    restaurants = q.all()
-    return [p.serialize() for p in restaurants]
+    if cuisine_types is not None:
+        allrestaurants_list = []
+        for restaurant in q.all():
+            for restaurant_cuisine in restaurant.cuisine_type:
+                if restaurant_cuisine in cuisine_types:
+                    allrestaurants_list.append(restaurant)
+                    break
+        return [p.serialize() for p in allrestaurants_list]
+    else:
+        restaurants = q.all()
+        return [p.serialize() for p in restaurants]
 
 
 def delete_restaurants():
