@@ -88,7 +88,7 @@ class Restaurant(db):
         return _validate_float(key, value, 0, 5)
 
     def serialize(self):
-        complex_fields = ['tables', 'working_days']
+        complex_fields = ['tables', 'working_days', 'dishes', 'avg_time_of_stay']
         serialized = dict([(k,v) for k,v in self.__dict__.items() if k not in complex_fields and k[0] != '_' and not inspect.ismethod(v)])
         tables, working_days, dishes = [], [], []
         for table in self.tables:
@@ -100,6 +100,7 @@ class Restaurant(db):
         for dish in self.dishes:
             dishes.append(dish.serialize())
         serialized['dishes'] = dishes
+        serialized['avg_time_of_stay'] = round(self.avg_time_of_stay, 1)
         return serialized
 
 

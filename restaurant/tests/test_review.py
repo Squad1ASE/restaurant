@@ -5,7 +5,6 @@ from tests.utilities import get_reviews_by_API, mocked_reservations
 import datetime
 from unittest import mock
 from unittest.mock import patch
-import requests
 
 
 def _check_reviews(review, dict_review):

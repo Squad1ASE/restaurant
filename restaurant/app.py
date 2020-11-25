@@ -2,7 +2,7 @@ import connexion, logging
 from flask import jsonify
 from celery import Celery
 from database import db_session, init_db, Restaurant, Like, Review, RestaurantDeleted
-
+import requests
 
 #TODO prendere da variabili d'ambiente
 REQUEST_TIMEOUT_SECONDS = 1
@@ -54,7 +54,7 @@ celery = make_celery(application)
 
 @application.teardown_appcontext
 def shutdown_session(exception=None):
-    database.db_session.remove()
+    db_session.remove()
 
 
 @celery.task()
