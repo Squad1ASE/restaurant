@@ -9,10 +9,10 @@ import datetime
 import inspect
 
 
-#DATABASEURI = os.environ['DATABASE_URI']
+DATABASEURI = os.environ['DATABASE_RESTAURANT_URI']
 db = declarative_base()
-#engine = create_engine(DATABASEURI, convert_unicode=True)
-engine = create_engine('sqlite:///restaurant.db', convert_unicode=True)
+engine = create_engine(DATABASEURI, convert_unicode=True)
+#engine = create_engine('sqlite:///restaurant.db', convert_unicode=True)
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 

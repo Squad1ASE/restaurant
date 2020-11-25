@@ -3,11 +3,14 @@ from flask import jsonify
 from celery import Celery
 from database import db_session, init_db, Restaurant, Like, Review, RestaurantDeleted
 import requests
+import os
 
 #TODO prendere da variabili d'ambiente
 REQUEST_TIMEOUT_SECONDS = 1
-RESERVATIONS_SERVICE = 'http://0.0.0.0:5010'
-
+#RESERVATIONS_SERVICE = 'http://0.0.0.0:5010'
+RESERVATIONS_SERVICE = os.environ['RESERVATION_SERVICE']
+USER_SERVICE = os.environ['USER_SERVICE']
+API_GATEWAY_SERVICE = os.environ['API_GATEWAY_SERVICE']
 
 def create_app():
     logging.basicConfig(level=logging.INFO)
@@ -20,10 +23,10 @@ def create_app():
 def make_celery(app):
     celery = Celery(
         app.import_name,
-        # broker=os.environ['CELERY_BROKER_URL'],
-        # backend=os.environ['CELERY_BACKEND_URL']
-        backend='redis://localhost:6379',
-        broker='redis://localhost:6379'
+        broker=os.environ['CELERY_RESTAURANT_BROKER_URL'],
+        backend=os.environ['CELERY_RESTAURANT_BACKEND_URL']
+        #backend='redis://localhost:6379',
+        #broker='redis://localhost:6379'
     )
     celery.conf.update(app.config)
     celery.conf.beat_schedule = dict(

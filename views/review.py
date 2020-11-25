@@ -5,11 +5,13 @@ from sqlalchemy import or_, and_
 import json
 import datetime
 import requests
+import os
 
 
 #TODO prendere da variabili d'ambiente
 REQUEST_TIMEOUT_SECONDS = 1
-RESERVATIONS_SERVICE = 'http://0.0.0.0:5010'
+#RESERVATIONS_SERVICE = 'http://0.0.0.0:5010'
+RESERVATIONS_SERVICE = os.environ['RESERVATION_SERVICE']
 
 
 def _compose_url_get_reservations(user_id, restaurant_id, end):
